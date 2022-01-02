@@ -92,19 +92,18 @@ router.post('/gateway/service/register', (req, res) => {
         return res.status(400).json({ message: `Configuration already exists for ${requestBody.serviceName} at ${requestBody.url}`})
     } else {
         const currentServicesData = registryData.services
-        console.log(currentServicesData)
         if (registry.services.hasOwnProperty(requestBody.serviceName) == false) {
             const newService = {
-                [requestBody.serviceName]: { 
+                [requestBody.serviceName.toLowerCase()]: { 
                     index: 0,
                     loadBalanceStrategy: "ROUND_ROBIN",
                     instances: []
                 }
             }
             registryData.services = Object.assign(currentServicesData, newService)
-            registryData.services[requestBody.serviceName].instances.push({ ...requestBody })
+            registryData.services[requestBody.serviceName.toLowerCase()].instances.push({ ...requestBody })
         }else{
-            registryData.services[requestBody.serviceName].instances.push({ ...requestBody })
+            registryData.services[requestBody.serviceName.toLowerCase()].instances.push({ ...requestBody })
 
         }
 
@@ -118,11 +117,11 @@ router.post('/gateway/service/register', (req, res) => {
                 fs.writeFile('dist/registry/registry.json', JSON.stringify(registryData), (error) => {
                     console.log(error)
                 })
-                logger.info(`registerService - Succeessfully registered ${requestBody.serviceName}`);
+                logger.info(`registerService - Successfully registered ${requestBody.serviceName}`);
 
                 return res.status(200).json({ 
                     message: `Succeessfully registered ${requestBody.serviceName}`, 
-                    data: registryData.services[requestBody.serviceName] })
+                    data: registryData.services[requestBody.serviceName.toLowerCase()] })
             }
         })
     }
@@ -147,10 +146,10 @@ router.post('/gateway/service/unregister', (req, res) => {
       }
 
     if (serviceAlreadyExists(requestBody)) {
-        const index = registryData.services[requestBody.serviceName].instances.findIndex((instance: { url: any }) => {
+        const index = registryData.services[requestBody.serviceName.toLowerCase()].instances.findIndex((instance: { url: any }) => {
             return requestBody.url === instance.url
         })
-        registryData.services[requestBody.serviceName].instances.splice(index, 1)
+        registryData.services[requestBody.serviceName.toLowerCase()].instances.splice(index, 1)
         fs.writeFile('src/registry/registry.json', JSON.stringify(registryData), (error) => {
             if (error) {
                 logger.error(`unregisterService - Could not unregister ${requestBody.serviceName}: ${error}`);
@@ -162,9 +161,9 @@ router.post('/gateway/service/unregister', (req, res) => {
                     console.log(error)
                 })
 
-                logger.info(`unregisterService - Succeessfully unregistered ${requestBody.serviceName}`);
+                logger.info(`unregisterService - Successfully unregistered ${requestBody.serviceName}`);
 
-                return res.status(200).json({ message: `Succeessfully unregistered ${requestBody.serviceName}`})
+                return res.status(200).json({ message: `Successfully unregistered ${requestBody.serviceName}`})
             }
         })
     } else {
@@ -182,8 +181,8 @@ router.get('/gateway/service/all', (_req, res) => {
 })
 
 router.get('/gateway/service/:serviceName', (req, res) => {    
-    if (registry.services.hasOwnProperty(req.params.serviceName) == true ) {
-    const instances = registryData.services[req.params.serviceName].instances
+    if (registry.services.hasOwnProperty(req.params.serviceName.toLowerCase()) == true ) {
+    const instances = registryData.services[req.params.serviceName.toLowerCase()].instances
     logger.info(`getServiceInstances - Instances fetced successfully`); 
 
     return res.status(200).json({ message: `Service instances returned successfully`, data: instances })
@@ -198,8 +197,8 @@ router.get('/gateway/service/:serviceName', (req, res) => {
     
 })
 
-router.all('/:serviceName/:path', async (req, res) => {
-    if (registry.services.hasOwnProperty(req.params.serviceName) == false) {
+router.all('/:serviceName/:path/:sl1?/:sl2?/:sl3?/:sl4?/:sl5?/:sl6?/:sl7?/:sl8?', async (req, res) => {
+    if (registry.services.hasOwnProperty(req.params.serviceName.toLowerCase()) == false) {
         logger.error(`getServiceInstances - Service name not found`); 
 
         return res.status(404).json({
@@ -225,10 +224,20 @@ router.all('/:serviceName/:path', async (req, res) => {
             })
         }
 
+        const trailingUrlChain1 = req.params.sl1 ? '/' + req.params.sl1 : ''
+        const trailingUrlChain2 = req.params.sl2 ? '/' + req.params.sl2 : ''
+        const trailingUrlChain3 = req.params.sl3 ? '/' + req.params.sl3 : ''
+        const trailingUrlChain4 = req.params.sl4 ? '/' + req.params.sl4 : ''
+        const trailingUrlChain5 = req.params.sl5 ? '/' + req.params.sl5 : ''
+        const trailingUrlChain6 = req.params.sl6 ? '/' + req.params.sl6 : ''
+        const trailingUrlChain7 = req.params.sl7 ? '/' + req.params.sl7 : ''
+        const trailingUrlChain8 = req.params.sl8 ? '/' + req.params.sl8 : ''
+
         const newIndex = loadbalancerData[service.loadBalanceStrategy](service)
         const url = service.instances[newIndex].url
         const method = req.method
-        const apiUrl = url + req.params.path
+        const apiUrl = `${url}${req.params.path}${trailingUrlChain1}${trailingUrlChain2}${trailingUrlChain3}
+        ${trailingUrlChain4}${trailingUrlChain5}${trailingUrlChain6}${trailingUrlChain7}${trailingUrlChain8}`
         const apiBody = req.body as string
         const headers = req.headers
 
@@ -239,6 +248,7 @@ router.all('/:serviceName/:path', async (req, res) => {
 
             return res.status(response.status).json(response.data)
         } catch (error: any) {
+            console.log(error.code)
             logger.error(`gatewayRouting - An error occured: ${error.message}`);
 
             return res.status(400).json({message: `An error occured: ${error.message}`})
