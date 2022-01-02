@@ -53,8 +53,7 @@ router.post('/gateway/instance/enable/:serviceName', (req, res) => {
                 return res.status(400).json({ message: `Could not enable/disable ${requestBody.url} for service ${serviceName} : ${error}`})
             } else {
                 // write to dist folder too
-                fs.writeFile('dist/registry/registry.json', JSON.stringify(registry), (error) => {
-                    console.log(error)
+                fs.writeFile('dist/registry/registry.json', JSON.stringify(registry), (_error) => {
                 })
                 logger.info(`enableInstance - Succeessfully enabled/disabled ${requestBody.url} for service ${serviceName}`); 
 
@@ -114,8 +113,7 @@ router.post('/gateway/service/register', (req, res) => {
                 return res.status(400).json({ message: `Could not register ${requestBody.serviceName}: ${error}`})
             } else {
                 // write to dist folder too
-                fs.writeFile('dist/registry/registry.json', JSON.stringify(registryData), (error) => {
-                    console.log(error)
+                fs.writeFile('dist/registry/registry.json', JSON.stringify(registryData), (_error) => {
                 })
                 logger.info(`registerService - Successfully registered ${requestBody.serviceName}`);
 
@@ -157,8 +155,7 @@ router.post('/gateway/service/unregister', (req, res) => {
                 return res.status(400).json({ message: `Could not unregister ${requestBody.serviceName}: ${error}`})
             } else {
                 // write to dist folder too
-                fs.writeFile('dist/registry/registry.json', JSON.stringify(registryData), (error) => {
-                    console.log(error)
+                fs.writeFile('dist/registry/registry.json', JSON.stringify(registryData), (_error) => {
                 })
 
                 logger.info(`unregisterService - Successfully unregistered ${requestBody.serviceName}`);
@@ -217,8 +214,7 @@ router.all('/:serviceName/:path/:sl1?/:sl2?/:sl3?/:sl4?/:sl5?/:sl6?/:sl7?/:sl8?'
                 }
 
                 // write to dist folder too
-                fs.writeFile('dist/registry/registry.json', JSON.stringify(registryData), (error) => {
-                    console.log(error)
+                fs.writeFile('dist/registry/registry.json', JSON.stringify(registryData), (_error) => {
                 })
                 return
             })
@@ -248,10 +244,24 @@ router.all('/:serviceName/:path/:sl1?/:sl2?/:sl3?/:sl4?/:sl5?/:sl6?/:sl7?/:sl8?'
 
             return res.status(response.status).json(response.data)
         } catch (error: any) {
-            console.log(error.code)
+            if(error.code == 'ECONNREFUSED') {
+                // turn the service inactive
+                service.instances[newIndex].enabled = false
+                fs.writeFile('src/registry/registry.json', JSON.stringify(registry), (error) => {
+            if (error) {
+                logger.error(`gatewayRouting - Could not disable ${url} for service ${service.instances[newIndex].serviceName} : ${error}`); 
+            } else {
+                // write to dist folder too
+                fs.writeFile('dist/registry/registry.json', JSON.stringify(registry), (_error) => {
+                })
+                logger.info(`gatewayRouting - Successfully disabled ${url} for service ${service.instances[newIndex].serviceName}`); 
+            }
+        })
+
+            }
             logger.error(`gatewayRouting - An error occured: ${error.message}`);
 
-            return res.status(400).json({message: `An error occured: ${error.message}`})
+            return res.status(error.response.status).json({message: `An error occured: ${error.message}`})
         }
     } else {
         logger.error(`gatewayRouting - Service name ${req.params.serviceName} does not exist`);

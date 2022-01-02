@@ -1,8 +1,1 @@
-{
-    "services": {
-    },
-    "auth": {
-      "users": {
-      }
-    }
-  }
+{"services":{"sabi":{"index":4,"loadBalanceStrategy":"ROUND_ROBIN","instances":[{"serviceName":"sabi","protocol":"http","host":"127.0.0.1","port":7005,"url":"http://127.0.0.1:7005/","enabled":true},{"serviceName":"sabi","protocol":"http","host":"127.0.0.1","port":7006,"url":"http://127.0.0.1:7006/","enabled":false},{"serviceName":"sabi","protocol":"http","host":"127.0.0.1","port":7007,"url":"http://127.0.0.1:7007/","enabled":false},{"serviceName":"sabi","protocol":"http","host":"127.0.0.1","port":7008,"url":"http://127.0.0.1:7008/","enabled":false},{"serviceName":"sabi","protocol":"http","host":"127.0.0.1","port":7009,"url":"http://127.0.0.1:7009/","enabled":false}]}},"auth":{"users":{}}}
