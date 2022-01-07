@@ -4,8 +4,8 @@ export const axiosCall = async (method: any, url: any, data: any, headers: any) 
     const config: AxiosRequestConfig = {
         method,
         url,
+        data,
         headers,
-        data
       };
       const response: AxiosResponse = await axios(config);
       return response

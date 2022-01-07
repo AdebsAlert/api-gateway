@@ -6,6 +6,7 @@ import { loadbalancer } from '../util/loadbalancer'
 import { logger } from '../util/logger';
 import joi from '@hapi/joi';
 import { axiosCall } from '../util/axiosCaller'
+import { AUTH_FIELDS, AUTH_URL } from '../util/config'
 // init the registry
 const registryData: {[index: string]:any} = registry;
 const loadbalancerData: {[index: string]:any} = loadbalancer;
@@ -190,8 +191,32 @@ router.get('/gateway/service/:serviceName', (req, res) => {
             message: 'Service name not found',
           });
     }
+})
 
-    
+router.post('/gateway/user/authenticate', async (req, res) => {
+    const authFields = AUTH_FIELDS.replace(/^\s+|\s+$/gm,'').split(','); // remove spaces if any and strip string by comma on auth fields
+    // const authData = AUTH_FIELDS.replace(/^\s+|\s+$/gm,'').split('.');  // remove spaces if any and strip string by comma on auth data fields
+
+    const username: string = authFields[0]
+    const password: string = authFields[1]
+
+        const method = 'POST'
+        const apiUrl = `${AUTH_URL}`
+        const apiBody = {[username]: req.body.username, [password]: req.body.password}
+        const headers = {}
+
+        // call axios
+        try {
+            const response = await axiosCall(method, apiUrl, apiBody, headers)
+
+            logger.info(`gatewayRouting - Successfully authenticated the request`);
+
+            return res.status(response.status).json(response.data)
+        } catch (error: any) {
+            logger.error(`authenticate - ${error.response.data.message}`);
+
+            return res.status(error.response.status).json({message: `${error.response.data.message}`})
+        }
 })
 
 router.all('/:serviceName/:path/:sl1?/:sl2?/:sl3?/:sl4?/:sl5?/:sl6?/:sl7?/:sl8?', async (req, res) => {
@@ -203,6 +228,17 @@ router.all('/:serviceName/:path/:sl1?/:sl2?/:sl3?/:sl4?/:sl5?/:sl6?/:sl7?/:sl8?'
           });
     }
     const service = registryData.services[req.params.serviceName]
+
+    // check if any active instance for this server
+    let servInstances = service.instances.find( (instance: { [x: string]: boolean }) => instance['enabled'] === true );
+
+    if(!servInstances) {
+        logger.error(`gatewayRouting - No active instance for service ${req.params.serviceName}`);
+
+        return res.status(400).json({message: `No active instance for service ${req.params.serviceName}`})
+
+    }
+
     if (service) {
         if (!service.loadBalanceStrategy) {
             service.loadBalanceStrategy = 'ROUND_ROBIN'
@@ -239,13 +275,13 @@ router.all('/:serviceName/:path/:sl1?/:sl2?/:sl3?/:sl4?/:sl5?/:sl6?/:sl7?/:sl8?'
 
         // call axios
         try {
-            const response = await axiosCall(method, apiUrl, headers, apiBody)
+            const response = await axiosCall(method, apiUrl, apiBody, headers)
             logger.info(`gatewayRouting - Successfully routed request: method ${method}, url: ${apiUrl}`);
 
             return res.status(response.status).json(response.data)
         } catch (error: any) {
             if(error.code == 'ECONNREFUSED') {
-                // turn the service inactive
+                // turn the service inactive as it is unreachable
                 service.instances[newIndex].enabled = false
                 fs.writeFile('src/registry/registry.json', JSON.stringify(registry), (error) => {
             if (error) {
@@ -257,11 +293,14 @@ router.all('/:serviceName/:path/:sl1?/:sl2?/:sl3?/:sl4?/:sl5?/:sl6?/:sl7?/:sl8?'
                 logger.info(`gatewayRouting - Successfully disabled ${url} for service ${service.instances[newIndex].serviceName}`); 
             }
         })
+            logger.error(`gatewayRouting - An error occured: service ${url} is unreachable`);
+
+            return res.status(400).json({message: `An error occured: service ${url} is unreachable`})
 
             }
-            logger.error(`gatewayRouting - An error occured: ${error.message}`);
+            logger.error(`gatewayRouting - ${error.response.data.message}`);
 
-            return res.status(error.response.status).json({message: `An error occured: ${error.message}`})
+            return res.status(error.response.status).json({message: `${error.response.data.message}`})
         }
     } else {
         logger.error(`gatewayRouting - Service name ${req.params.serviceName} does not exist`);

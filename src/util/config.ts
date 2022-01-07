@@ -15,3 +15,7 @@ export const PORT = throwIfUndefined(process.env.PORT, 'PORT');
 export const APP = throwIfUndefined(process.env.APP, 'APP');
 export const NODE_ENV = throwIfUndefined(process.env.NODE_ENV, 'NODE_ENV');
 export const RATE_LIMIT_PER_HOUR = throwIfUndefined(process.env.RATE_LIMIT_PER_HOUR, 'RATE_LIMIT_PER_HOUR');
+export const APP_SECRET = throwIfUndefined(process.env.APP_SECRET, 'APP_SECRET');
+export const AUTH_URL = throwIfUndefined(process.env.AUTH_URL, 'AUTH_URL');
+export const AUTH_FIELDS = throwIfUndefined(process.env.AUTH_FIELDS, 'AUTH_FIELDS');
+export const AUTH_DATA_PATH = throwIfUndefined(process.env.AUTH_DATA_PATH, 'AUTH_DATA_PATH');
