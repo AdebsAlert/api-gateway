@@ -7,6 +7,7 @@ import { logger } from '../util/logger';
 import joi from '@hapi/joi';
 import { axiosCall } from '../util/axiosCaller'
 import { AUTH_FIELDS, AUTH_URL } from '../util/config'
+import { ping } from '../util/ping'
 // init the registry
 const registryData: {[index: string]:any} = registry;
 const loadbalancerData: {[index: string]:any} = loadbalancer;
@@ -65,13 +66,14 @@ router.post('/gateway/instance/enable/:serviceName', (req, res) => {
     return
 })
 
-router.post('/gateway/service/register', (req, res) => {
+router.post('/gateway/service/register', async (req, res) => {
     const requestBody = req.body
     const schema = joi.object().keys({
         serviceName: joi.string().required(),
         protocol: joi.string().required(),
         host: joi.string().required(),
         port: joi.number().required(),
+        healthUrl: joi.string().required(),
       });
     
       const validation = schema.validate(requestBody);
@@ -83,8 +85,26 @@ router.post('/gateway/service/register', (req, res) => {
         });
       }
 
+
       requestBody.url = requestBody.protocol + "://" + requestBody.host + ":" + requestBody.port + "/"
       requestBody.enabled = true
+
+      // check if healthUrl contains http
+      if(requestBody.healthUrl.search('http') != 0) {
+
+        logger.error(`registerService - Please input full path health url for ${requestBody.url}`);
+
+        return res.status(400).json({ message: `Please input full path health url for ${requestBody.url}`})
+      }
+
+      // ping health endpoint to see if it is available
+      const pingHealth = await ping.isAlive(requestBody.healthUrl)
+
+      if(pingHealth === false) {
+        logger.error(`registerService - Health url is not reachable for ${requestBody.url}`);
+
+        return res.status(400).json({ message: `Health url is not reachable for ${requestBody.url}`})
+      }
 
     if (serviceAlreadyExists(requestBody) == true) {
         logger.error(`registerService - Configuration already exists for ${requestBody.serviceName} at ${requestBody.url}`);
