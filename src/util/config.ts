@@ -18,4 +18,4 @@ export const RATE_LIMIT_PER_HOUR = throwIfUndefined(process.env.RATE_LIMIT_PER_H
 export const APP_SECRET = throwIfUndefined(process.env.APP_SECRET, 'APP_SECRET');
 export const AUTH_URL = throwIfUndefined(process.env.AUTH_URL, 'AUTH_URL');
 export const AUTH_FIELDS = throwIfUndefined(process.env.AUTH_FIELDS, 'AUTH_FIELDS');
-export const AUTH_DATA_PATH = throwIfUndefined(process.env.AUTH_DATA_PATH, 'AUTH_DATA_PATH');
+export const TOKEN_EXPIRY = throwIfUndefined(process.env.TOKEN_EXPIRY, 'TOKEN_EXPIRY');

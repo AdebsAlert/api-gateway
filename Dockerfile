@@ -16,7 +16,7 @@ COPY . .
 # Build dist
 RUN npm run build-ts
 
-# Expose port 7001
-EXPOSE 7001
+# Expose port
+EXPOSE ${PORT}
 
 CMD npm run start

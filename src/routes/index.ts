@@ -8,6 +8,7 @@ import joi from '@hapi/joi';
 import { axiosCall } from '../util/axiosCaller'
 import { AUTH_FIELDS, AUTH_URL } from '../util/config'
 import { ping } from '../util/ping'
+import { signJWT } from '../util/auth'
 // init the registry
 const registryData: {[index: string]:any} = registry;
 const loadbalancerData: {[index: string]:any} = loadbalancer;
@@ -215,7 +216,6 @@ router.get('/gateway/service/:serviceName', (req, res) => {
 
 router.post('/gateway/user/authenticate', async (req, res) => {
     const authFields = AUTH_FIELDS.replace(/^\s+|\s+$/gm,'').split(','); // remove spaces if any and strip string by comma on auth fields
-    // const authData = AUTH_FIELDS.replace(/^\s+|\s+$/gm,'').split('.');  // remove spaces if any and strip string by comma on auth data fields
 
     const username: string = authFields[0]
     const password: string = authFields[1]
@@ -229,13 +229,32 @@ router.post('/gateway/user/authenticate', async (req, res) => {
         try {
             const response = await axiosCall(method, apiUrl, apiBody, headers)
 
-            logger.info(`gatewayRouting - Successfully authenticated the request`);
+            logger.info(`gatewayRouting - authenticating the request`);
 
-            return res.status(response.status).json(response.data)
+            // check if response is 200 and sign the credential
+            if(response.status !== 200) {
+                logger.info(`gatewayRouting - authentication failed`);
+
+                return res.status(response.status).json(response.data)
+            }else{
+                // it is a valid auth, sign the credential
+                const token = signJWT(response.data.data);
+
+                logger.info(`gatewayRouting - Successfully authenticated the request`);
+
+                return res.status(response.status).json({
+                    message: 'Authenticated successfully',
+                    token,
+                    data: response.data.data
+                })
+                
+            }
+
+            
         } catch (error: any) {
-            logger.error(`authenticate - ${error.response.data.message}`);
+            logger.error(`authenticate - ${error.message}`);
 
-            return res.status(error.response.status).json({message: `${error.response.data.message}`})
+            return res.status(400).json({message: `${error.message}`})
         }
 })
 
@@ -329,14 +348,14 @@ router.all('/:serviceName/:path/:sl1?/:sl2?/:sl3?/:sl4?/:sl5?/:sl6?/:sl7?/:sl8?'
     }
 })
 
-const serviceAlreadyExists = (checkInfo: { serviceName: string | number; url: any }) => {
+const serviceAlreadyExists = (checkInfo: { serviceName: string | number; url: any; }) => {
     let exists = false
 
     if (registry.services.hasOwnProperty(checkInfo.serviceName) == false) {
         exists = false
     }else{
-        registryData.services[checkInfo.serviceName].instances.forEach((instance: { url: any }) => {
-            if (instance.url === checkInfo.url) {
+        registryData.services[checkInfo.serviceName].instances.forEach((instance: { url: any; enabled: boolean }) => {
+            if (instance.url === checkInfo.url && instance.enabled === true) {
                 exists = true
                 return
             }else{
