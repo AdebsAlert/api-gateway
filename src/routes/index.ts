@@ -8,7 +8,7 @@ import joi from '@hapi/joi';
 import { axiosCall } from '../util/axiosCaller'
 import { AUTH_FIELDS, AUTH_URL } from '../util/config'
 import { ping } from '../util/ping'
-import { signJWT } from '../util/auth'
+import { refreshToken, signJWT } from '../util/auth'
 // init the registry
 const registryData: {[index: string]:any} = registry;
 const loadbalancerData: {[index: string]:any} = loadbalancer;
@@ -214,6 +214,27 @@ router.get('/gateway/service/:serviceName', (req, res) => {
     }
 })
 
+router.post('/gateway/user/authenticate/refresh-token', async (req, res) => {
+    const token = req.body.token
+
+        // call axios
+        try {
+            const newToken = await refreshToken(token)
+
+                logger.info(`refreshToken - Successfully refreshed token`);
+
+                return res.status(200).json({
+                    message: 'Token refreshed successfully',
+                    token: newToken,
+                })
+            
+        } catch (error: any) {
+            logger.error(`refreshToken - ${error.message}`);
+
+            return res.status(400).json({message: `${error.message}`})
+        }
+})
+
 router.post('/gateway/user/authenticate', async (req, res) => {
     const authFields = AUTH_FIELDS.replace(/^\s+|\s+$/gm,'').split(','); // remove spaces if any and strip string by comma on auth fields
 
@@ -229,18 +250,18 @@ router.post('/gateway/user/authenticate', async (req, res) => {
         try {
             const response = await axiosCall(method, apiUrl, apiBody, headers)
 
-            logger.info(`gatewayRouting - authenticating the request`);
+            logger.info(`authenticate - authenticating the request`);
 
             // check if response is 200 and sign the credential
             if(response.status !== 200) {
-                logger.info(`gatewayRouting - authentication failed`);
+                logger.info(`authenticate - authentication failed`);
 
                 return res.status(response.status).json(response.data)
             }else{
                 // it is a valid auth, sign the credential
                 const token = signJWT(response.data.data);
 
-                logger.info(`gatewayRouting - Successfully authenticated the request`);
+                logger.info(`authenticate - Successfully authenticated the request`);
 
                 return res.status(response.status).json({
                     message: 'Authenticated successfully',
@@ -337,9 +358,9 @@ router.all('/:serviceName/:path/:sl1?/:sl2?/:sl3?/:sl4?/:sl5?/:sl6?/:sl7?/:sl8?'
             return res.status(400).json({message: `An error occured: service ${url} is unreachable`})
 
             }
-            logger.error(`gatewayRouting - ${error.response.data.message}`);
+            logger.error(`gatewayRouting - ${error.message}`);
 
-            return res.status(error.response.status).json({message: `${error.response.data.message}`})
+            return res.status(400).json({message: `${error.message}`})
         }
     } else {
         logger.error(`gatewayRouting - Service name ${req.params.serviceName} does not exist`);
