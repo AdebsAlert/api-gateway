@@ -3,7 +3,6 @@ import jwt from 'jsonwebtoken';
 import { TOKEN_EXPIRY } from './config';
 import { APP_SECRET } from './config';
 
-
 export function signJWT(data: string | object | Buffer) {
   return jwt.sign(data,
     APP_SECRET,
@@ -13,7 +12,7 @@ export function signJWT(data: string | object | Buffer) {
   );
 }
 
-export async function authenticate(headers: { authorization: any; }) {
+export async function authenticate(headers: { authorization: string; }) {
   const { authorization } = headers;
 
   const schema = Joi.object()
@@ -32,7 +31,7 @@ export async function authenticate(headers: { authorization: any; }) {
 
   const [, token] = authorization!.split('Bearer ');
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let decoded: any;
+    let decoded: Object;
     try {
       decoded = jwt.verify(token, APP_SECRET);
     } catch (error) {
@@ -44,6 +43,7 @@ export async function authenticate(headers: { authorization: any; }) {
 
 
 export async function refreshToken(token: string) {
+
   let decoded: any;
     try {
       decoded = jwt.verify(token, APP_SECRET);

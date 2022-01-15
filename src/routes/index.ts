@@ -238,6 +238,20 @@ router.post('/gateway/user/authenticate/refresh-token', async (req, res) => {
 router.post('/gateway/user/authenticate', async (req, res) => {
     const authFields = AUTH_FIELDS.replace(/^\s+|\s+$/gm,'').split(','); // remove spaces if any and strip string by comma on auth fields
 
+    const schema = joi.object().keys({
+        username: joi.string().required(),
+        password: joi.string().required(),
+      });
+    
+      const validation = schema.validate(req.body);
+      if (validation.error) {
+        logger.error(`authenticate - authentication failed due to validation error - ${validation.error.details[0].message}`);
+    
+        return res.status(400).json({
+          message: validation.error.details[0].message,
+        });
+      }
+
     const username: string = authFields[0]
     const password: string = authFields[1]
 
