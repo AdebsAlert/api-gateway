@@ -1,10 +1,10 @@
 import express from 'express'
 import helmet from 'helmet'
 const app = express()
-import * as registry from './registry/registry.json'
 import { router } from './routes'
-import { PORT, RATE_LIMIT_PER_HOUR } from './util/config'
+import { APP_SECRET, AUTH0_AUDIENCE, AUTH0_CLIENT_ID, AUTH0_CLIENT_SECRET, AUTH0_ISSUERER, PORT, RATE_LIMIT_PER_HOUR } from './util/config'
 import rateLimit from 'express-rate-limit'
+import { auth } from 'express-openid-connect'
 
 const limiter = rateLimit({
 	windowMs: 60 * 60 * 1000, // 60 minutes
@@ -13,15 +13,35 @@ const limiter = rateLimit({
 	legacyHeaders: false, // Disable the `X-RateLimit-*` headers
 })
 
+const config: any = {
+	authRequired: false,
+	auth0Logout: true,
+	secret: APP_SECRET,
+	baseURL: AUTH0_AUDIENCE,
+	clientID: AUTH0_CLIENT_ID,
+	issuerBaseURL: AUTH0_ISSUERER,
+	clientSecret: AUTH0_CLIENT_SECRET,
+	authorizationParams: {
+		response_type: 'code',
+		audience: `${AUTH0_AUDIENCE}/`,
+		scope: 'openid profile email',
+	},
+	routes: {
+		login: false,
+		logout: false,
+	}
+};
+
 // Apply the rate limiting middleware to all requests
 app.use(limiter)
 app.use(express.json())
 app.use(helmet())
+app.use(auth(config))
 
-app.get('/ui', (_req, res) => {
-    res.render('index', { services: registry.services })
+app.get('/', (req, res) => {
+	res.json({user: req.oidc.user, token: req.oidc.accessToken?.access_token});
 })
-// app.use(auth)
+
 app.use('/', router)
 
 app.listen(PORT, () => {

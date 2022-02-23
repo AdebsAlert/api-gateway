@@ -1,18 +1,23 @@
+import { AUTH0_JWKS_URI, AUTH0_AUDIENCE, AUTH0_ISSUERER } from './config';
+
+import jwt from 'express-jwt';
+import jwks from 'jwks-rsa';
 import Joi from '@hapi/joi';
-import jwt from 'jsonwebtoken';
-import { TOKEN_EXPIRY } from './config';
-import { APP_SECRET } from './config';
+import axios from 'axios';
 
-export function signJWT(data: string | object | Buffer) {
-  return jwt.sign(data,
-    APP_SECRET,
-    {
-      expiresIn: TOKEN_EXPIRY,
-    },
-  );
-}
+export const jwtCheck = jwt({
+  secret: jwks.expressJwtSecret({
+      cache: true,
+      rateLimit: true,
+      jwksRequestsPerMinute: 5,
+      jwksUri: AUTH0_JWKS_URI
+}),
+audience: `${AUTH0_AUDIENCE}/`,
+issuer: `${AUTH0_ISSUERER}/`,
+algorithms: ['RS256']
+});
 
-export async function authenticate(headers: { authorization: string; }) {
+export async function authenticateAuth0(headers: { authorization: string; }) {
   const { authorization } = headers;
 
   const schema = Joi.object()
@@ -31,35 +36,18 @@ export async function authenticate(headers: { authorization: string; }) {
 
   const [, token] = authorization!.split('Bearer ');
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let decoded: Object;
     try {
-      decoded = jwt.verify(token, APP_SECRET);
+      const response = await axios.get(
+        `${AUTH0_ISSUERER}/userinfo`,
+        {
+          headers: {
+            authorization: `Bearer ${token}`,
+          }
+        }
+      )
+
+      return response.data;
     } catch (error) {
       throw new Error('Invalid authorization token, you need to authenticate again');
     }
-
-    return decoded;
-}
-
-
-export async function refreshToken(token: string) {
-
-  let decoded: any;
-    try {
-      decoded = jwt.verify(token, APP_SECRET);
-    } catch (error) {
-      throw new Error('Invalid authorization token, you need to authenticate again');
-    }
-
-    delete decoded.iat;
-    delete decoded.exp;
-
-    return jwt.sign(decoded,
-      APP_SECRET,
-      {
-        expiresIn: TOKEN_EXPIRY,
-      },
-    );
-
-
 }

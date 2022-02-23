@@ -6,12 +6,61 @@ import { loadbalancer } from '../util/loadbalancer'
 import { logger } from '../util/logger';
 import joi from '@hapi/joi';
 import { axiosCall } from '../util/axiosCaller'
-import { AUTH_FIELDS, AUTH_URL } from '../util/config'
 import { ping } from '../util/ping'
-import { refreshToken, signJWT } from '../util/auth'
 // init the registry
 const registryData: {[index: string]:any} = registry;
 const loadbalancerData: {[index: string]:any} = loadbalancer;
+
+router.get('/auth', (req, res) => {
+    logger.info(`authSignin - signin process ongoing`);
+	const redirectUrl = req.query.redirect_url ? req.query.redirect_url as string: '/';
+	res.oidc.login({ returnTo: '/auth/redirect?url='+redirectUrl });
+})
+
+router.get('/auth/signin', (req, res) => {
+    logger.info(`authSignin - signin process ongoing`);
+	const redirectUrl = req.query.redirect_url ? req.query.redirect_url as string: '/';
+    res.oidc.login({ returnTo: '/auth/redirect?url='+redirectUrl });
+})
+
+router.get('/auth/refresh-token', async (req, res) => {
+    logger.info(`authrefreshToken - refresh token process ongoing`);
+	if(!req.oidc.accessToken) { // noaccess token to refresh, redirect to login
+        logger.info(`authrefreshToken - no token found, login in`);
+		res.oidc.login({ returnTo: '/auth/refresh-token' });
+		return
+	}
+
+	let { access_token, isExpired, refresh }: any = req.oidc.accessToken;
+	if (isExpired()) {
+        logger.info(`authrefreshToken - token is expired, refreshing token`);
+		({ access_token } = await refresh());
+	}
+
+	res.json({token: access_token});
+})
+
+router.get('/auth/logout', (req, res) => {
+    logger.info(`authLogout - logout process ongoing`);
+	const redirectUrl = req.query.redirect_url ? req.query.redirect_url as string: '/';
+		res.oidc.logout({ returnTo: '/auth/redirect?url='+redirectUrl });
+})
+
+router.get('/auth/redirect', (req, res) => {
+    logger.info(`authRedirect - auth redirection process ongoing`);
+	const redirectUrl = req.query.url ? req.query.url as string: '/';
+    let token = '0', auth = false;
+    
+    if(req.oidc.accessToken) { 
+         token = req.oidc.accessToken?.access_token;
+         auth = true;
+    }
+
+    const fullRedirectUrl = `${redirectUrl.replace(/\/$/, '')}/?webauth=${auth}&x-oidc-token=${token}`
+
+    return res.redirect(301, fullRedirectUrl);
+})
+
 
 router.post('/gateway/instance/enable/:serviceName', (req, res) => {
     const serviceName = req.params.serviceName;
@@ -214,84 +263,27 @@ router.get('/gateway/service/:serviceName', (req, res) => {
     }
 })
 
-router.post('/gateway/user/authenticate/refresh-token', async (req, res) => {
-    const token = req.body.token
+// router.post('/gateway/user/authenticate/refresh-token', async (req, res) => {
+//     const token = req.body.token
 
-        // call axios
-        try {
-            const newToken = await refreshToken(token)
+//         // call axios
+//         try {
+//             const newToken = await refreshToken(token)
 
-                logger.info(`refreshToken - Successfully refreshed token`);
+//                 logger.info(`refreshToken - Successfully refreshed token`);
 
-                return res.status(200).json({
-                    message: 'Token refreshed successfully',
-                    token: newToken,
-                })
+//                 return res.status(200).json({
+//                     message: 'Token refreshed successfully',
+//                     token: newToken,
+//                 })
             
-        } catch (error: any) {
-            logger.error(`refreshToken - ${error.message}`);
+//         } catch (error: any) {
+//             logger.error(`refreshToken - ${error.message}`);
 
-            return res.status(400).json({message: `${error.message}`})
-        }
-})
+//             return res.status(400).json({message: `${error.message}`})
+//         }
+// })
 
-router.post('/gateway/user/authenticate', async (req, res) => {
-    const authFields = AUTH_FIELDS.replace(/^\s+|\s+$/gm,'').split(','); // remove spaces if any and strip string by comma on auth fields
-
-    const schema = joi.object().keys({
-        username: joi.string().required(),
-        password: joi.string().required(),
-      });
-    
-      const validation = schema.validate(req.body);
-      if (validation.error) {
-        logger.error(`authenticate - authentication failed due to validation error - ${validation.error.details[0].message}`);
-    
-        return res.status(400).json({
-          message: validation.error.details[0].message,
-        });
-      }
-
-    const username: string = authFields[0]
-    const password: string = authFields[1]
-
-        const method = 'POST'
-        const apiUrl = `${AUTH_URL}`
-        const apiBody = {[username]: req.body.username, [password]: req.body.password}
-        const headers = {}
-
-        // call axios
-        try {
-            const response = await axiosCall(method, apiUrl, apiBody, headers)
-
-            logger.info(`authenticate - authenticating the request`);
-
-            // check if response is 200 and sign the credential
-            if(response.status !== 200) {
-                logger.info(`authenticate - authentication failed`);
-
-                return res.status(response.status).json(response.data)
-            }else{
-                // it is a valid auth, sign the credential
-                const token = signJWT(response.data.data);
-
-                logger.info(`authenticate - Successfully authenticated the request`);
-
-                return res.status(response.status).json({
-                    message: 'Authenticated successfully',
-                    token,
-                    data: response.data.data
-                })
-                
-            }
-
-            
-        } catch (error: any) {
-            logger.error(`authenticate - ${error.message}`);
-
-            return res.status(400).json({message: `${error.message}`})
-        }
-})
 
 router.all('/:serviceName/:path/:sl1?/:sl2?/:sl3?/:sl4?/:sl5?/:sl6?/:sl7?/:sl8?', async (req, res) => {
     if (registry.services.hasOwnProperty(req.params.serviceName.toLowerCase()) == false) {

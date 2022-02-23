@@ -1,7 +1,1 @@
-{
-    "services": {
-    },
-    "auth": {
-        "users": {}
-    }
-}
+{"services":{"sabi":{"index":0,"loadBalanceStrategy":"ROUND_ROBIN","instances":[{"serviceName":"sabi","protocol":"http","host":"127.0.0.1","port":7005,"healthUrl":"http://127.0.0.1:7005/api/v1/status","url":"http://127.0.0.1:7005/","enabled":true}]}},"auth":{"users":{}}}
