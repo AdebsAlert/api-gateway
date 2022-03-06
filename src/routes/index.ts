@@ -23,6 +23,16 @@ router.get('/auth/signin', (req, res) => {
     res.oidc.login({ returnTo: '/auth/redirect?url='+redirectUrl });
 })
 
+router.get('/auth/me', (req, res) => {
+    logger.info(`authMe - getting authenticated user processing ongoing`);
+    if(!req.oidc.accessToken) { // noaccess token to refresh, redirect to login
+        res.status(401).json({user: null, token: null});
+		return
+	}
+    res.status(200).json({user: req.oidc.user, token: req.oidc.accessToken?.access_token});
+})
+
+
 router.get('/auth/refresh-token', async (req, res) => {
     logger.info(`authrefreshToken - refresh token process ongoing`);
 	if(!req.oidc.accessToken) { // noaccess token to refresh, redirect to login
