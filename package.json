@@ -14,8 +14,12 @@
     "heroku-build": "npm run build-ts && npm run start"
   },
   "keywords": [],
-  "author": "",
+  "author": "Adebayo Mustafa <adebsalert@gmail.com>",
   "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AdebsAlert/api-gateway"
+  },
   "devDependencies": {
     "@types/express": "^4.17.13",
     "@types/hapi__joi": "^17.1.8",
