@@ -34,7 +34,12 @@ npm install
 cp .env.example .env
 ```
 
-4. Build and start the API Gateway
+4. Set your AUTH policy in your .env file and your policy params
+```sh
+AUTH_POLICY='auth0' or 'custom'
+```
+
+5. Build and start the API Gateway
 ```sh
 npm run build-ts
 npm run watch-serve

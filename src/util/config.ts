@@ -22,3 +22,4 @@ export const AUTH0_ISSUERER = throwIfUndefined(process.env.AUTH0_ISSUERER, 'AUTH
 export const AUTH0_JWKS_URI = throwIfUndefined(process.env.AUTH0_JWKS_URI, 'AUTH0_JWKS_URI').replace(/\/$/, '');
 export const AUTH0_CLIENT_ID = throwIfUndefined(process.env.AUTH0_CLIENT_ID, 'AUTH0_CLIENT_ID');
 export const AUTH0_CLIENT_SECRET = throwIfUndefined(process.env.AUTH0_CLIENT_SECRET, 'AUTH0_CLIENT_SECRET');
+export const CUSTOM_AUTH_SECRET = throwIfUndefined(process.env.CUSTOM_AUTH_SECRET, 'CUSTOM_AUTH_SECRET');

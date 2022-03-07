@@ -7,10 +7,14 @@ import { logger } from '../util/logger';
 import joi from '@hapi/joi';
 import { axiosCall } from '../util/axiosCaller'
 import { ping } from '../util/ping'
+import { AUTH_POLICY } from '../util/config'
 // init the registry
 const registryData: {[index: string]:any} = registry;
 const loadbalancerData: {[index: string]:any} = loadbalancer;
 
+
+/******** Begin Auth0 Authentication routes */
+if(AUTH_POLICY === 'auth0') {
 router.get('/auth', (req, res) => {
     logger.info(`authSignin - signin process ongoing`);
 	const redirectUrl = req.query.redirect_url ? req.query.redirect_url as string: '/';
@@ -70,6 +74,9 @@ router.get('/auth/redirect', (req, res) => {
 
     return res.redirect(301, fullRedirectUrl);
 })
+}
+
+/*********** End Auth0 Authentication routes */
 
 
 router.post('/gateway/instance/enable/:serviceName', (req, res) => {
