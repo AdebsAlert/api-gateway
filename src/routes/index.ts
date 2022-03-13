@@ -304,10 +304,10 @@ router.get('/gateway/service/:serviceName', (req, res) => {
 
 router.all('/:serviceName/:path/:sl1?/:sl2?/:sl3?/:sl4?/:sl5?/:sl6?/:sl7?/:sl8?', async (req, res) => {
     if (registry.services.hasOwnProperty(req.params.serviceName.toLowerCase()) == false) {
-        logger.error(`getServiceInstances - Service name not found`); 
+        logger.error(`${req.params.serviceName.toLowerCase()} service not found in registry`); 
 
         return res.status(404).json({
-            message: 'Service name not found',
+            message: `${req.params.serviceName.toLowerCase()} service not found in registry`,
           });
     }
     const service = registryData.services[req.params.serviceName]
@@ -349,11 +349,11 @@ router.all('/:serviceName/:path/:sl1?/:sl2?/:sl3?/:sl4?/:sl5?/:sl6?/:sl7?/:sl8?'
         const trailingUrlChain8 = req.params.sl8 ? '/' + req.params.sl8 : ''
 
         const newIndex = loadbalancerData[service.loadBalanceStrategy](service)
-        const url = service.instances[newIndex].url
+        const url = `${service.instances[newIndex].url}${req.params.serviceName.toLowerCase()}/`
         const method = req.method
         const apiUrl = `${url}${req.params.path}${trailingUrlChain1}${trailingUrlChain2}${trailingUrlChain3}
         ${trailingUrlChain4}${trailingUrlChain5}${trailingUrlChain6}${trailingUrlChain7}${trailingUrlChain8}`
-        const apiBody = req.body as string
+        const apiBody = req.body
         const headers = req.headers
 
         // call axios
