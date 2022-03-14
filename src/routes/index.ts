@@ -11,6 +11,7 @@ import { AUTH_POLICY } from '../util/config'
 // init the registry
 const registryData: {[index: string]:any} = registry;
 const loadbalancerData: {[index: string]:any} = loadbalancer;
+import appendQuery from 'append-query'
 
 
 /******** Begin Auth0 Authentication routes */
@@ -351,14 +352,15 @@ router.all('/:serviceName/:path/:sl1?/:sl2?/:sl3?/:sl4?/:sl5?/:sl6?/:sl7?/:sl8?'
         const newIndex = loadbalancerData[service.loadBalanceStrategy](service)
         const url = `${service.instances[newIndex].url}${req.params.serviceName.toLowerCase()}/`
         const method = req.method
-        const apiUrl = `${url}${req.params.path}${trailingUrlChain1}${trailingUrlChain2}${trailingUrlChain3}
-        ${trailingUrlChain4}${trailingUrlChain5}${trailingUrlChain6}${trailingUrlChain7}${trailingUrlChain8}`
+        const query = req.query as unknown as string
+        const apiUrl = `${url}${req.params.path}${trailingUrlChain1}${trailingUrlChain2}${trailingUrlChain3}${trailingUrlChain4}${trailingUrlChain5}${trailingUrlChain6}${trailingUrlChain7}${trailingUrlChain8}`
         const apiBody = req.body
         const headers = req.headers
+        const apiUrlQuery = appendQuery(apiUrl, query)
 
         // call axios
         try {
-            const response = await axiosCall(method, apiUrl, apiBody, headers)
+            const response = await axiosCall(method, apiUrlQuery, apiBody, headers)
             logger.info(`gatewayRouting - Successfully routed request: method ${method}, url: ${apiUrl}`);
 
             return res.status(response.status).json(response.data)
